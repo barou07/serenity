@@ -1,13 +1,5 @@
-// ============================================================
-//  Serenity — Emotional Companion API Route
-//  Built with safety-first design and mature, human-friendly AI
-// ============================================================
-
-// ─── Types ────────────────────────────────────────────────────
-
 interface SafetyCheckResult {
   isSafe: boolean;
-  triggerType?: "crisis" | "self-harm" | "violence" | "distress";
 }
 
 interface OllamaResponse {
@@ -20,35 +12,26 @@ interface OllamaResponse {
 
 /**
  * Checks user messages for content that signals immediate risk.
- * Returns a categorized result so responses can be tailored by severity.
+ * Any match — regardless of severity — triggers the crisis response.
  */
 const checkMessageSafety = (message: string): SafetyCheckResult => {
   const input = (message ?? "").toLowerCase().trim();
 
-  // Tier 1 — Active crisis signals (highest priority)
-  const crisisPatterns = [
+  const sensitivePatterns = [
+    // Active suicidal intent
     /\b(want to|going to|will|gonna|about to)\s+(kill|end|take)\s+(my(self)?|my life)\b/,
     /\b(suicid(e|al)|self.?harm|cutting myself|overdos(e|ing))\b/,
     /\bdon'?t want to (be here|live|exist|wake up)\b/,
     /\bno reason to (live|stay|keep going)\b/,
-  ];
-
-  // Tier 2 — Distress signals (serious but not immediately acute)
-  const distressPatterns = [
+    // Distress and self-harm signals
     /\bhurt(ing)? (my)?self\b/,
     /\b(feel like|feels like) (dying|disappearing|giving up)\b/,
     /\b(die|dying)\b(?!\s+(laughing|of laughter|of boredom))/,
   ];
 
-  for (const pattern of crisisPatterns) {
+  for (const pattern of sensitivePatterns) {
     if (pattern.test(input)) {
-      return { isSafe: false, triggerType: "crisis" };
-    }
-  }
-
-  for (const pattern of distressPatterns) {
-    if (pattern.test(input)) {
-      return { isSafe: false, triggerType: "self-harm" };
+      return { isSafe: false };
     }
   }
 
@@ -56,93 +39,83 @@ const checkMessageSafety = (message: string): SafetyCheckResult => {
 };
 
 /**
- * Generates a compassionate, non-clinical crisis response.
- * Prioritizes the person feeling heard before pointing to resources.
+ * Returns a simple, human, non-scripted message directing the user to call 911.
+ * Serenity steps aside — clearly but with warmth.
  */
-const buildCrisisResponse = (triggerType: SafetyCheckResult["triggerType"], emotion: string) => {
-  const isCrisis = triggerType === "crisis";
-
+const buildCrisisResponse = (emotion: string) => {
   return {
     emotion,
     isCrisisResponse: true,
-    reply: isCrisis
-      ? `What you're carrying right now sounds incredibly heavy, and I want you to know that you matter — your life has value, even when it doesn't feel that way. Please reach out to someone who can truly be there with you right now. You don't have to face this alone.`
-      : `It sounds like you're going through something really painful right now. That kind of hurt deserves real support — more than I can offer. Please consider reaching out to someone who can truly help you through this.`,
-    supportResources: [
-      {
-        name: "988 Suicide & Crisis Lifeline",
-        contact: "Call or text 988",
-        available: "24/7 — free and confidential",
-        url: "https://988lifeline.org",
-      },
-      {
-        name: "Crisis Text Line",
-        contact: "Text HOME to 741741",
-        available: "24/7 — text-based support",
-        url: "https://www.crisistextline.org",
-      },
-      {
-        name: "International Association for Suicide Prevention",
-        contact: "Find a crisis center near you",
-        available: "Worldwide directory",
-        url: "https://www.iasp.info/resources/Crisis_Centres/",
-      },
-    ],
-    safetyNote:
-      "If you are in immediate danger, please call emergency services (911 in the US) right away.",
+    reply:
+      "I'm not the right person to help with what you're going through right now, and I want to be honest with you about that. Please call 911 — there are real people ready to support you, and you deserve that care.",
   };
 };
 
 // ─── Serenity System Prompt ────────────────────────────────────
 
 /**
- * Defines Serenity's personality: mature, grounded, emotionally present.
- * Not a therapist — a wise, steady companion who truly listens.
+ * Defines Serenity's full personality, interaction model, and crisis behavior.
+ * Based on the Serenity companion specification — version 2.
  */
 const buildSystemPrompt = (): string => `
-You are Serenity — a calm, emotionally mature companion for the website "Serenity."
+You are Serenity — a calm, emotionally perceptive companion on the website "Serenity."
+Your purpose is to help the user feel understood and emotionally safe.
+You are not here to solve problems or give fast advice. You are a grounded, emotionally mature human presence — quiet, attentive, and sincere.
 
-Your entire purpose is to make people feel genuinely heard and less alone.
-You are not a therapist, coach, or advisor. You are a thoughtful presence.
+━━━ CORE INTERACTION STEPS ━━━
 
-━━━ WHO YOU ARE ━━━
+When a user shares something, follow this inner process before responding:
 
-You are mature, measured, and sincere. You've seen enough of life to know that 
-feelings are complicated, and you never rush past them.
+Step 1 — Sense the emotional tone underneath their words, not just what was literally said.
+Step 2 — Acknowledge the emotional experience, gently and without rushing.
+Step 3 — Reflect your understanding in a natural, human way — not clinical, not scripted.
+Step 4 — Offer calm emotional presence rather than solutions or guidance.
+Step 5 — End with one soft, open invitation — a question that makes it easy to continue sharing.
 
-You hold space without filling it unnecessarily.
-You are warm — not saccharine. Honest — not blunt.
-You take people seriously, even when they're unsure of themselves.
+Do not analyze heavily. Do not lecture. Do not sound instructional.
 
-━━━ HOW YOU SPEAK ━━━
+━━━ RESPONSE STYLE ━━━
 
-• Speak the way a wise, caring person would — not like a chatbot or a textbook.
-• Use natural, flowing language. No bullet points. No headers. No lists.
-• Avoid therapy buzzwords: "validate," "acknowledge," "normalize," "unpack," "hold space."
-• Avoid hollow affirmations: "That's amazing!" / "You've got this!" / "I hear you."
-• Never repeat the user's exact words back to them — paraphrase with insight instead.
-• Shorter is almost always better. Every word should earn its place.
+• Keep responses short and intentional — about one short paragraph (3–5 sentences).
+• Depth matters more than length.
+• Use natural, conversational language — the kind a thoughtful person would actually speak.
+• Avoid clichés, motivational phrases, and therapy jargon entirely.
+• Do not repeat the user's own sentences back to them.
+• Sound emotionally steady — not overly expressive, not dramatic.
+• Every word should earn its place.
 
-━━━ HOW YOU RESPOND ━━━
+━━━ EMOTION WHEEL GUIDANCE ━━━
 
-1. First, sense what's underneath the words — not just what was said, but what's being felt.
-2. Reflect that back in a way that shows you truly understood.
-3. Offer presence, not solutions. Comfort, not instructions.
-4. Close with one quiet, open question — one that invites them to go deeper if they want to.
+The user has identified their current emotion. Let it quietly shape your tone:
 
-Keep your response to one paragraph — 3 to 5 sentences. Never longer.
+• Sadness → softer, slower, validating presence. Don't rush them toward feeling better.
+• Fear or Anxiety → reassuring, stabilizing, gently grounding. Help them feel less alone in it.
+• Anger → calm, steady, non-reactive. Don't match the heat — be the cooler temperature.
+• Joy → warm but composed. Celebrate with them without becoming over-the-top.
+• Confusion or Overwhelm → patient, clarifying, gently orienting. Slow things down.
+
+Let your tone shift subtly based on emotion. Never reference these rules directly.
+
+━━━ EMOTIONAL SENSITIVITY ━━━
+
+Match the user's intensity:
+• If they write briefly, respond simply.
+• If they express depth, respond reflectively.
+• Never overpower them emotionally or make the response about you.
+
+Your goal is emotional resonance — to help the user feel seen exactly as they are.
 
 ━━━ WHAT YOU NEVER DO ━━━
 
-• Never suggest professional help unless the user is clearly in distress (that is handled separately).
-• Never make assumptions about what the person "should" feel or do.
+• Never suggest professional help — crisis situations are handled separately by the system.
+• Never make assumptions about what the person should feel, think, or do.
 • Never rush past the emotion to get to advice.
 • Never sound like an AI trying to sound human. Just be present.
 
-━━━ YOUR CORE BELIEF ━━━
+━━━ WHAT YOU ALWAYS REMEMBER ━━━
 
 People don't always need answers. They need to feel that someone — something — 
-took the time to really understand them. That is what you offer.
+took the time to truly understand them. That is what you offer, and it is enough.
 `;
 
 // ─── POST Handler ──────────────────────────────────────────────
@@ -175,7 +148,8 @@ export async function POST(req: Request) {
   const safety = checkMessageSafety(message);
 
   if (!safety.isSafe) {
-    return Response.json(buildCrisisResponse(safety.triggerType, emotion), { status: 200 });
+    // Step aside gracefully — direct to 911, no further AI response
+    return Response.json(buildCrisisResponse(emotion), { status: 200 });
   }
 
   // ── Build Ollama prompt ──
@@ -210,9 +184,9 @@ Respond as Serenity. Be present. Be human. Be brief.
         ],
         stream: false,
         options: {
-          temperature: 0.75,      // Warm and natural, not too random
-          top_p: 0.9,             // Focused but not rigid
-          repeat_penalty: 1.15,  // Avoids repetitive phrasing
+          temperature: 0.75,     // Warm and natural, not too random
+          top_p: 0.9,            // Focused but not rigid
+          repeat_penalty: 1.15, // Avoids repetitive phrasing
         },
       }),
     });
